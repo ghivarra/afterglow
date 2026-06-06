@@ -1,13 +1,26 @@
 package main
 
-import "github.com/gofiber/fiber/v3"
+import (
+	"ghivarra/afterglow/extension"
+	"ghivarra/afterglow/server"
+)
 
+// @title Afterglow Auto-Backup REST API
+// @version 1.0
+// @description Afterglow Auto-Backup Contabo Server REST API using Go + Fiber Framework.
+// @contact.name Ghivarra Senandika Rushdie
+// @contact.email gsenandika@gmail.com
+// @BasePath /
+// @securityDefinitions.apiKey ApiKey
+// @in header
+// @name X-API-KEY
 func main() {
-	app := fiber.New()
+	// Run/Load Extensions
+	extension.LoadEnvExtension()
+	extension.LoadDbExtension()
+	extension.LoadTimezoneExtension()
+	extension.LoadVersionExtension()
 
-	app.Get("/", func(c fiber.Ctx) error {
-		return c.SendString("Hello, World!")
-	})
-
-	app.Listen(":7855")
+	// run server
+	server.CreateServer()
 }

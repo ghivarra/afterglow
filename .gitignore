@@ -1,6 +1,19 @@
-# ENV
+# Environment
 .env
 
+# Build & Junk
 tmp
 bin
 build
+docs/*
+
+# Sqlite DB
+*.db
+
+# useless MD
+*.MD
+*.md
+!README.md
+
+# versioning
+version.txt
