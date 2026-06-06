@@ -21,13 +21,8 @@ func Index(ctx fiber.Ctx) error {
 	return ctx.Status(200).JSON(api.Response[AppData, *string]{
 		Status:  "success",
 		Message: fmt.Sprintf("%s REST API is running normally", environment.APP_NAME),
-		Data: AppData{
-			Environment: environment.APP_ENV,
-			Name:        environment.APP_NAME,
-			Version:     environment.APP_VERSION,
-			Port:        environment.SERVER_PORT,
-		},
-		Errors: nil,
+		Data:    loadAppData(),
+		Errors:  nil,
 	})
 }
 
@@ -43,30 +38,20 @@ func Index(ctx fiber.Ctx) error {
 func HealthCheck(ctx fiber.Ctx) error {
 	// check database
 	var resultDB int
-	tx := database.DB.Raw("SELECT 1").Scan(&resultDB)
+	tx := database.Ctx.Raw("SELECT 1").Scan(&resultDB)
 	if tx.Error != nil {
 		return ctx.Status(500).JSON(api.Response[AppData, string]{
 			Status:  "error",
 			Message: fmt.Sprintf("%s REST API is not running normally. Failed to connect to database.", environment.APP_NAME),
-			Data: AppData{
-				Environment: environment.APP_ENV,
-				Name:        environment.APP_NAME,
-				Version:     environment.APP_VERSION,
-				Port:        environment.SERVER_PORT,
-			},
-			Errors: tx.Error.Error(),
+			Data:    loadAppData(),
+			Errors:  tx.Error.Error(),
 		})
 	}
 
 	return ctx.Status(200).JSON(api.Response[AppData, *string]{
 		Status:  "success",
 		Message: fmt.Sprintf("%s REST API is running normally and connected to the database succesfully", environment.APP_NAME),
-		Data: AppData{
-			Environment: environment.APP_ENV,
-			Name:        environment.APP_NAME,
-			Version:     environment.APP_VERSION,
-			Port:        environment.SERVER_PORT,
-		},
-		Errors: nil,
+		Data:    loadAppData(),
+		Errors:  nil,
 	})
 }

@@ -10,7 +10,7 @@ import (
 	"gorm.io/gorm/schema"
 )
 
-var DB *gorm.DB
+var Ctx *gorm.DB
 
 func ConnectDB() {
 	var err error
@@ -24,7 +24,7 @@ func ConnectDB() {
 	}
 
 	// connect
-	DB, err = gorm.Open(sqlite.Open(environment.DB_PATH), &gorm.Config{
+	Ctx, err = gorm.Open(sqlite.Open(environment.DB_PATH), &gorm.Config{
 		Logger: loggerOption,
 		NamingStrategy: schema.NamingStrategy{
 			SingularTable: true,
