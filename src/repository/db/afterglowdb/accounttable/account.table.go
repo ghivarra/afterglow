@@ -13,13 +13,13 @@ func CreateAccount(entity dbentity.AccountEntity) (dbentity.AccountEntity, error
 	return entity, res.Error
 }
 
-func FetchById(id string) (*dbentity.AccountEntity, error) {
+func FetchByUsername(username string) (*dbentity.AccountEntity, error) {
 	var result dbentity.AccountEntity
 	var mainTable = dbentity.AccountTableName
 
 	res := database.Ctx.
 		Table(mainTable).
-		Where("id = ?", id).
+		Where("username = ?", username).
 		First(&result)
 
 	return &result, res.Error

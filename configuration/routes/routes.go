@@ -2,6 +2,7 @@ package routes
 
 import (
 	"ghivarra/afterglow/src/app/api/account"
+	accounttoken "ghivarra/afterglow/src/app/api/account-token"
 	"ghivarra/afterglow/src/app/home"
 	"ghivarra/afterglow/src/middleware"
 
@@ -16,4 +17,5 @@ func CreateRouter(app *fiber.App) {
 	// api
 	app.Use("/api", middleware.ApiKeyAuth)
 	app.Post("/api/account", account.Create)
+	app.Put("/api/account-token/update", accounttoken.Update)
 }

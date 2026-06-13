@@ -2,6 +2,7 @@ package dto
 
 type ContaboAuthResult struct {
 	ResultStatus bool
+	AccountId    *string
 	Token        *string
 	Message      string
 	RawData      *string
