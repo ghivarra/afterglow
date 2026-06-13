@@ -11,6 +11,8 @@ import (
 	"github.com/gofiber/fiber/v3"
 
 	_ "ghivarra/afterglow/docs"
+
+	recoverer "github.com/gofiber/fiber/v3/middleware/recover"
 )
 
 func CreateServer() {
@@ -19,6 +21,9 @@ func CreateServer() {
 		CaseSensitive: true,
 		ErrorHandler:  handler.HandleError,
 	})
+
+	// throw panic into error handler
+	app.Use(recoverer.New())
 
 	routes.CreateRouter(app)
 

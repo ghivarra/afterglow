@@ -2,10 +2,11 @@ package api
 
 // interface for single content responses
 type Response[DataType any, ErrorType any] struct {
-	Status  string    `json:"status"` // HTTP STATUS TEXT
-	Message string    `json:"message"`
-	Data    DataType  `json:"data"`
-	Errors  ErrorType `json:"errors"`
+	Status    string    `json:"status"` // HTTP STATUS TEXT => error / success
+	Message   string    `json:"message"`
+	Data      DataType  `json:"data"`
+	Errors    ErrorType `json:"errors"`
+	Timestamp *string   `json:"timestamp,omitempty"`
 }
 
 // interface for index-type data
