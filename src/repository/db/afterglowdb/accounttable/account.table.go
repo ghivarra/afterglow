@@ -5,6 +5,14 @@ import (
 	"ghivarra/afterglow/src/mapping/entity/dbentity"
 )
 
+func CreateAccount(entity dbentity.AccountEntity) (dbentity.AccountEntity, error) {
+	res := database.Ctx.
+		Table(dbentity.AccountTableName).
+		Create(&entity)
+
+	return entity, res.Error
+}
+
 func FetchById(id string) (*dbentity.AccountEntity, error) {
 	var result dbentity.AccountEntity
 	var mainTable = dbentity.AccountTableName
