@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"ghivarra/afterglow/configuration/database"
 	"ghivarra/afterglow/environment"
+	"ghivarra/afterglow/src/exceptions"
 	"ghivarra/afterglow/src/mapping/api"
 
 	"github.com/gofiber/fiber/v3"
@@ -40,12 +41,11 @@ func HealthCheck(ctx fiber.Ctx) error {
 	var resultDB int
 	tx := database.Ctx.Raw("SELECT 1").Scan(&resultDB)
 	if tx.Error != nil {
-		return ctx.Status(500).JSON(api.Response[AppData, string]{
-			Status:  "error",
-			Message: fmt.Sprintf("%s REST API is not running normally. Failed to connect to database.", environment.APP_NAME),
-			Data:    loadAppData(),
-			Errors:  tx.Error.Error(),
-		})
+		return exceptions.NewAppException(
+			500,
+			fmt.Sprintf("%s REST API is not running normally. Failed to connect to database.", environment.APP_NAME), tx.Error,
+			loadAppData(),
+		)
 	}
 
 	return ctx.Status(200).JSON(api.Response[AppData, *string]{

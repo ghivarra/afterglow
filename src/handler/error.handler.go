@@ -14,14 +14,16 @@ import (
 func HandleError(ctx fiber.Ctx, err error) error {
 	code := fiber.StatusInternalServerError
 	message := "Internal Server Error"
+
+	var errReason error = nil
 	var errorData any = nil
 	var timestamp string = ""
 
-	var appErr *exceptions.AppException
-	if errors.As(err, &appErr) {
+	if appErr, ok := errors.AsType[*exceptions.AppException](err); ok {
 		code = appErr.Code
 		message = appErr.Message
-		errorData = appErr.Errors
+		errorData = appErr.ErrorData
+		errReason = appErr.Reason
 		timestamp = appErr.Timestamp
 	} else {
 		var fiberErr *fiber.Error
@@ -38,6 +40,7 @@ func HandleError(ctx fiber.Ctx, err error) error {
 		Status:    "error",
 		Message:   message,
 		Data:      errorData,
+		Errors:    errReason,
 		Timestamp: &timestamp,
 	})
 }
