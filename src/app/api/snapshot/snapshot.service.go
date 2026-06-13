@@ -9,6 +9,7 @@ import (
 	"ghivarra/afterglow/src/repository/db/afterglowdb/accounttokentable"
 	"ghivarra/afterglow/src/repository/db/afterglowdb/servertable"
 	"ghivarra/afterglow/src/repository/db/afterglowdb/snapshottable"
+	"time"
 )
 
 var errSnapshotResponseEmpty = errors.New("snapshot response is empty")
@@ -67,7 +68,7 @@ func createSnapshot(payload SnapshotCreateRequestDto) (dbentity.SnapshotEntity, 
 		ServerId:    server.Id,
 		Name:        contaboSnapshot.Name,
 		Description: &description,
-		CreatedAt:   contaboSnapshot.CreatedDate,
+		CreatedAt:   contaboSnapshot.CreatedDate.UTC().Format(time.RFC3339),
 		DeletedAt:   nil,
 	})
 	if err != nil {

@@ -22,7 +22,7 @@ import (
 )
 
 const CREATE_SNAPSHOT_PATH = "/compute/instances/{{SERVER_ID}}/snapshots"
-const CREATE_SNAPSHOT_TITLE = "AUTO-SNAPSHOT-{{DATETIME}}"
+const CREATE_SNAPSHOT_TITLE = "AUTO BACKUP {{DATETIME}}"
 const CREATE_SNAPSHOT_DESC = "(automated using {{APP_NAME}})"
 
 func CreateSnapshotBackup(ctx context.Context, serverId int, encryptedAccessToken string) dto.ContaboCreateSnapshotResult {
@@ -30,17 +30,7 @@ func CreateSnapshotBackup(ctx context.Context, serverId int, encryptedAccessToke
 	var errMessage string
 
 	// generate request id
-	uuid, err := uuid.NewV7()
-	if err != nil {
-		errMessage = fmt.Sprintf("failed to generate uuid. Error: %v", err)
-		log.Errorf(errMessage)
-
-		return dto.ContaboCreateSnapshotResult{
-			ResultStatus: false,
-			Message:      errMessage,
-			Error:        err,
-		}
-	}
+	uuid := uuid.New()
 	requestId := uuid.String()
 
 	// decrypt token
@@ -58,9 +48,9 @@ func CreateSnapshotBackup(ctx context.Context, serverId int, encryptedAccessToke
 
 	// build url and payload
 	now := time.Now().UTC()
-	datetime := now.Format("2006-01-02_15:04:05")
+	datetime := now.Format("2006-01-02 15-04")
 	path := strings.Replace(CREATE_SNAPSHOT_PATH, "{{SERVER_ID}}", strconv.Itoa(serverId), 1)
-	snapshotUrl := environment.API_CONTABO_HOST + path
+	snapshotUrl := environment.API_CONTABO_GENERAL_HOST + path
 	payload := dto.ContaboCreateSnapshotPayload{
 		Name:        strings.Replace(CREATE_SNAPSHOT_TITLE, "{{DATETIME}}", datetime, 1),
 		Description: strings.Replace(CREATE_SNAPSHOT_DESC, "{{APP_NAME}}", environment.APP_NAME, 1),
@@ -98,7 +88,7 @@ func CreateSnapshotBackup(ctx context.Context, serverId int, encryptedAccessToke
 	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	// build client
-	requestTime := time.Now().UTC()
+	requestTime := time.Now().UTC().Format(time.RFC3339)
 	client := &http.Client{
 		Timeout: TIMEOUT_TIME * time.Second,
 	}
@@ -126,7 +116,7 @@ func CreateSnapshotBackup(ctx context.Context, serverId int, encryptedAccessToke
 	defer response.Body.Close()
 
 	// response time
-	responseTime := time.Now().UTC()
+	responseTime := time.Now().UTC().Format(time.RFC3339)
 
 	// parse body
 	body, err := io.ReadAll(response.Body)

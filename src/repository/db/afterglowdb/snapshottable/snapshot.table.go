@@ -28,7 +28,7 @@ func FetchActiveSnapshotsByServerId(serverId int) ([]dbentity.SnapshotEntity, er
 }
 
 func SoftDeleteSnapshotById(id string) error {
-	now := time.Now().UTC()
+	now := time.Now().UTC().Format(time.RFC3339)
 
 	res := database.Ctx.
 		Table(dbentity.SnapshotTableName).

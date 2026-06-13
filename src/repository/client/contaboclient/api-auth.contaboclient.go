@@ -26,20 +26,10 @@ const LOGIN_PATH = "/auth/realms/contabo/protocol/openid-connect/token"
 func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 	var err error
 	var errMessage string
-	var LOGIN_URL = environment.API_CONTABO_HOST + LOGIN_PATH
+	var LOGIN_URL = environment.API_CONTABO_AUTH_HOST + LOGIN_PATH
 
 	// generate request id
-	uuid, err := uuid.NewV7()
-	if err != nil {
-		errMessage = fmt.Sprintf("failed to generate uuid. Error: %v", err)
-		log.Errorf(errMessage)
-
-		return dto.ContaboAuthResult{
-			ResultStatus: false,
-			Message:      errMessage,
-			Error:        err,
-		}
-	}
+	uuid := uuid.New()
 	requestId := uuid.String()
 
 	// find account
@@ -120,7 +110,7 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
 	// build client
-	requestTime := time.Now().UTC()
+	requestTime := time.Now().UTC().Format(time.RFC3339)
 	client := &http.Client{
 		Timeout: TIMEOUT_TIME * time.Second,
 	}
@@ -148,7 +138,7 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 	defer response.Body.Close()
 
 	// response time
-	responseTime := time.Now().UTC()
+	responseTime := time.Now().UTC().Format(time.RFC3339)
 
 	// parse body
 	body, err := io.ReadAll(response.Body)

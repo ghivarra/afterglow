@@ -20,7 +20,9 @@ func updateToken(payload UpdateTokenRequestDto) (string, error) {
 		return "", errors.New("contabo auth result is incomplete")
 	}
 
-	expiredAt := time.Now().UTC().Add(time.Duration(result.Result.ExpiresIn) * time.Second)
+	expiredAt := time.Now().UTC().
+		Add(time.Duration(result.Result.ExpiresIn) * time.Second).
+		Format(time.RFC3339)
 	accessToken, err := encryptservice.Encrypt(*result.Token)
 	if err != nil {
 		return "", err
