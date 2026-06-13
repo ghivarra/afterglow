@@ -4,6 +4,7 @@ import (
 	"ghivarra/afterglow/configuration/database"
 	"ghivarra/afterglow/environment"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v3/log"
@@ -39,6 +40,10 @@ func LoadVersionExtension() {
 	if errRead != nil {
 		log.Fatal("Version File Not Found!")
 	}
+
+	// remove new line
+	versionStr := string(versionBytes)
+	versionStr = strings.ReplaceAll(versionStr, "\n", "")
 
 	// set env
 	environment.SetAppVersion(string(versionBytes))
