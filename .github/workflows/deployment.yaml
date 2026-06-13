@@ -1,0 +1,104 @@
+name: Afterglow Production Deployment
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  deploy:
+    if: "!endsWith(github.event.release.tag_name, '-dev')"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Pull Git Changes & Version
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_VPS_HOST }}
+          port: ${{ secrets.PROD_VPS_PORT }}
+          username: ${{ secrets.PROD_VPS_USER }}
+          key: ${{ secrets.PROD_VPS_SSH_KEY }}
+          script: |
+            set -e
+
+            APP_DIR="${{ secrets.PROD_VPS_DIR }}"
+            TAG="${{ github.event.release.tag_name }}"
+
+            cd "$APP_DIR"
+            git fetch --tags
+            git checkout "$TAG"
+
+            echo "$TAG" > version.txt
+
+      - name: Install Dependency and Build Swagger Docs
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_VPS_HOST }}
+          port: ${{ secrets.PROD_VPS_PORT }}
+          username: ${{ secrets.PROD_VPS_USER }}
+          key: ${{ secrets.PROD_VPS_SSH_KEY }}
+          script: |
+            set -e
+
+            APP_DIR="${{ secrets.PROD_VPS_DIR }}"
+
+            cd "$APP_DIR"
+
+            export GOROOT="/home/${{ secrets.PROD_VPS_USER }}/.config/golang/1.26.4/go"
+            export GOPATH="/home/${{ secrets.PROD_VPS_USER }}/go"
+            export PATH="$GOROOT/bin:$GOPATH/bin:$PATH"
+
+            go version
+            go env GOROOT GOPATH
+            which go
+
+            go mod download
+
+            if [ ! -x "$GOPATH/bin/swag" ]; then
+              go install github.com/swaggo/swag/cmd/swag@latest
+            fi
+
+            swag init --parseDependency --parseInternal
+
+      - name: Build App
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_VPS_HOST }}
+          port: ${{ secrets.PROD_VPS_PORT }}
+          username: ${{ secrets.PROD_VPS_USER }}
+          key: ${{ secrets.PROD_VPS_SSH_KEY }}
+          script: |
+            set -e
+
+            APP_DIR="${{ secrets.PROD_VPS_DIR }}"
+
+            cd "$APP_DIR"
+
+            export GOROOT="/home/${{ secrets.PROD_VPS_USER }}/.config/golang/1.26.4/go"
+            export GOPATH="/home/${{ secrets.PROD_VPS_USER }}/go"
+            export PATH="$GOROOT/bin:$GOPATH/bin:$PATH"
+
+            go version
+            go env GOROOT GOPATH
+            which go
+
+            rm -rf build/*
+            GOMAXPROCS=1 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -p=1 -trimpath -o build/afterglow-app
+
+            cp .env build/.env
+            cp version.txt build/version.txt
+
+      - name: Running App
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_VPS_HOST }}
+          port: ${{ secrets.PROD_VPS_PORT }}
+          username: ${{ secrets.PROD_VPS_USER }}
+          key: ${{ secrets.PROD_VPS_SSH_KEY }}
+          script: |
+            set -e
+
+            APP_DIR="${{ secrets.PROD_VPS_DIR }}"
+            cd "$APP_DIR"
+
+            systemctl --user daemon-reload
+            systemctl --user restart gvr-afterglow
