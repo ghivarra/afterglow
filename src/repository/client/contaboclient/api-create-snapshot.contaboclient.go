@@ -1,19 +1,19 @@
 package contaboclient
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
 	"ghivarra/afterglow/environment"
 	"ghivarra/afterglow/src/mapping/dto"
 	"ghivarra/afterglow/src/mapping/entity/dbentity"
-	"ghivarra/afterglow/src/repository/db/afterglowdb/accounttable"
 	"ghivarra/afterglow/src/service/curlservice"
 	"ghivarra/afterglow/src/service/encryptservice"
 	"ghivarra/afterglow/src/service/logservice"
 	"io"
 	"net/http"
-	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -21,13 +21,13 @@ import (
 	"github.com/google/uuid"
 )
 
-const TIMEOUT_TIME = 20
-const LOGIN_PATH = "/auth/realms/contabo/protocol/openid-connect/token"
+const CREATE_SNAPSHOT_PATH = "/compute/instances/{{SERVER_ID}}/snapshots"
+const CREATE_SNAPSHOT_TITLE = "AUTO-SNAPSHOT-{{DATETIME}}"
+const CREATE_SNAPSHOT_DESC = "(automated using {{APP_NAME}})"
 
-func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
+func CreateSnapshotBackup(ctx context.Context, serverId int, encryptedAccessToken string) dto.ContaboCreateSnapshotResult {
 	var err error
 	var errMessage string
-	var LOGIN_URL = environment.API_CONTABO_HOST + LOGIN_PATH
 
 	// generate request id
 	uuid, err := uuid.NewV7()
@@ -35,7 +35,7 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 		errMessage = fmt.Sprintf("failed to generate uuid. Error: %v", err)
 		log.Errorf(errMessage)
 
-		return dto.ContaboAuthResult{
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      errMessage,
 			Error:        err,
@@ -43,65 +43,40 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 	}
 	requestId := uuid.String()
 
-	// find account
-	account, err := accounttable.FetchByUsername(username)
-	if err != nil || account == nil {
-		errMessage = fmt.Sprintf("account credentials is not found. Error: %v", err)
-		log.Errorf(errMessage)
-
-		return dto.ContaboAuthResult{
-			ResultStatus: false,
-			Message:      errMessage,
-			Error:        err,
-		}
-	}
-
-	// decrypt credentials
-	password, err := encryptservice.Decrypt(account.Password)
+	// decrypt token
+	accessToken, err := encryptservice.Decrypt(encryptedAccessToken)
 	if err != nil {
-		errMessage = fmt.Sprintf("failed to decrypt account password credential. Error: %v", err)
+		errMessage = fmt.Sprintf("failed to decrypt account access token. Error: %v", err)
 		log.Errorf(errMessage)
 
-		return dto.ContaboAuthResult{
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      errMessage,
 			Error:        err,
 		}
 	}
 
-	apiClientId, err := encryptservice.Decrypt(account.ApiClientId)
+	// build url and payload
+	now := time.Now().UTC()
+	datetime := now.Format("2006-01-02_15:04:05")
+	path := strings.Replace(CREATE_SNAPSHOT_PATH, "{{SERVER_ID}}", strconv.Itoa(serverId), 1)
+	snapshotUrl := environment.API_CONTABO_HOST + path
+	payload := dto.ContaboCreateSnapshotPayload{
+		Name:        strings.Replace(CREATE_SNAPSHOT_TITLE, "{{DATETIME}}", datetime, 1),
+		Description: strings.Replace(CREATE_SNAPSHOT_DESC, "{{APP_NAME}}", environment.APP_NAME, 1),
+	}
+	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		errMessage = fmt.Sprintf("failed to decrypt account api client id credential. Error: %v", err)
+		errMessage = fmt.Sprintf("failed to json stringify curl payloads. Error: %v", err)
 		log.Errorf(errMessage)
 
-		return dto.ContaboAuthResult{
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      errMessage,
 			Error:        err,
 		}
 	}
-
-	apiClientKey, err := encryptservice.Decrypt(account.ApiClientKey)
-	if err != nil {
-		errMessage = fmt.Sprintf("failed to decrypt account api client key credential. Error: %v", err)
-		log.Errorf(errMessage)
-
-		return dto.ContaboAuthResult{
-			ResultStatus: false,
-			Message:      errMessage,
-			Error:        err,
-		}
-	}
-
-	// payloads
-	payloads := url.Values{
-		"client_id":     {apiClientId},
-		"client_secret": {apiClientKey},
-		"grant_type":    {"password"},
-		"username":      {account.Username},
-		"password":      {password},
-	}
-	payloadStr := payloads.Encode()
+	payloadStr := string(payloadBytes)
 
 	// create client
 	ctx, cancel := context.WithTimeout(
@@ -110,15 +85,17 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 	)
 	defer cancel()
 
-	req, err := curlservice.CreateNewRequest(ctx, "POST", LOGIN_URL, strings.NewReader(payloadStr))
+	req, err := curlservice.CreateNewRequest(ctx, "POST", snapshotUrl, bytes.NewReader(payloadBytes))
 	if err != nil {
-		return dto.ContaboAuthResult{
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      err.Error(),
 			Error:        err,
 		}
 	}
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("x-request-id", requestId)
+	req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", accessToken))
 
 	// build client
 	requestTime := time.Now().UTC()
@@ -134,13 +111,13 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 
 		logservice.StoreContaboLog(dbentity.LogEntity{
 			Id:           requestId,
-			Url:          LOGIN_URL,
+			Url:          snapshotUrl,
 			Payload:      payloadStr,
 			ResponseCode: 425,
 			RequestedAt:  requestTime,
 		})
 
-		return dto.ContaboAuthResult{
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      errMessage,
 			Error:        err,
@@ -159,23 +136,21 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 
 		logservice.StoreContaboLog(dbentity.LogEntity{
 			Id:           requestId,
-			Url:          LOGIN_URL,
+			Url:          snapshotUrl,
 			Payload:      payloadStr,
 			ResponseCode: 425,
 			RequestedAt:  requestTime,
 		})
 
-		return dto.ContaboAuthResult{
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      errMessage,
 			Error:        err,
 		}
 	}
 
-	// create result variable
-	var result dto.ContaboAuthResponse
-
 	// parse
+	var result dto.ContaboCreateSnapshotResponse
 	err = json.Unmarshal(body, &result)
 	if err != nil {
 		errMessage = fmt.Sprintf("failed to parse response body into struct. Error: %v", err)
@@ -183,14 +158,15 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 
 		logservice.StoreContaboLog(dbentity.LogEntity{
 			Id:           requestId,
-			Url:          LOGIN_URL,
+			Url:          snapshotUrl,
 			Payload:      payloadStr,
 			ResponseBody: new(string(body)),
 			ResponseCode: response.StatusCode,
 			RequestedAt:  requestTime,
 			RespondedAt:  &responseTime,
 		})
-		return dto.ContaboAuthResult{
+
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      errMessage,
 			Error:        err,
@@ -198,10 +174,10 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 	}
 
 	// check status
-	if response.StatusCode != http.StatusOK {
+	if response.StatusCode != http.StatusOK && response.StatusCode != http.StatusCreated {
 		logservice.StoreContaboLog(dbentity.LogEntity{
 			Id:           requestId,
-			Url:          LOGIN_URL,
+			Url:          snapshotUrl,
 			Payload:      payloadStr,
 			ResponseBody: new(string(body)),
 			ResponseCode: response.StatusCode,
@@ -209,19 +185,27 @@ func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 			RespondedAt:  &responseTime,
 		})
 
-		return dto.ContaboAuthResult{
+		return dto.ContaboCreateSnapshotResult{
 			ResultStatus: false,
 			Message:      fmt.Sprintf("error %d", response.StatusCode),
 			Error:        fmt.Errorf("error %d", response.StatusCode),
 		}
 	}
 
-	return dto.ContaboAuthResult{
+	logservice.StoreContaboLog(dbentity.LogEntity{
+		Id:           requestId,
+		Url:          snapshotUrl,
+		Payload:      payloadStr,
+		ResponseBody: new(string(body)),
+		ResponseCode: response.StatusCode,
+		RequestedAt:  requestTime,
+		RespondedAt:  &responseTime,
+	})
+
+	return dto.ContaboCreateSnapshotResult{
 		ResultStatus: true,
-		AccountId:    &account.Id,
 		Result:       &result,
-		Token:        &result.AccessToken,
-		Message:      *new("OK"),
+		Message:      "OK",
 		RawData:      new(string(body)),
 		Error:        nil,
 	}

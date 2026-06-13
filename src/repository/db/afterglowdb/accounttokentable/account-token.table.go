@@ -23,3 +23,15 @@ func UpsertAccountToken(entity dbentity.AccountTokenEntity) (dbentity.AccountTok
 
 	return entity, res.Error
 }
+
+func FetchByAccountId(accountId string) (*dbentity.AccountTokenEntity, error) {
+	var result dbentity.AccountTokenEntity
+	var mainTable = dbentity.AccountTokenTableName
+
+	res := database.Ctx.
+		Table(mainTable).
+		Where("account_id = ?", accountId).
+		First(&result)
+
+	return &result, res.Error
+}
