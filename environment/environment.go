@@ -16,6 +16,7 @@ var ENCRYPTION_KEY string
 var SWAGGER_STATUS string
 var SWAGGER_USERNAME string
 var SWAGGER_PASSWORD string
+var API_CONTABO_HOST string
 
 func LoadServerEnv() {
 	// process
@@ -32,6 +33,7 @@ func LoadServerEnv() {
 	SWAGGER_STATUS = os.Getenv("SWAGGER_STATUS")
 	SWAGGER_USERNAME = os.Getenv("SWAGGER_USERNAME")
 	SWAGGER_PASSWORD = os.Getenv("SWAGGER_PASSWORD")
+	API_CONTABO_HOST = os.Getenv("API_CONTABO_HOST")
 }
 
 func SetAppVersion(version string) {

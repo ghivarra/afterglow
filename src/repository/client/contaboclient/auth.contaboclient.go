@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"ghivarra/afterglow/environment"
 	"ghivarra/afterglow/src/mapping/dto"
 	"ghivarra/afterglow/src/mapping/entity/dbentity"
 	"ghivarra/afterglow/src/repository/db/afterglowdb/accounttable"
@@ -21,11 +22,12 @@ import (
 )
 
 const TIMEOUT_TIME = 20
-const LOGIN_URL = "https://auth.contabo.com/auth/realms/contabo/protocol/openid-connect/token"
+const LOGIN_PATH = "/auth/realms/contabo/protocol/openid-connect/token"
 
 func Authenticate(ctx context.Context, username string) dto.ContaboAuthResult {
 	var err error
 	var errMessage string
+	var LOGIN_URL = environment.API_CONTABO_HOST + LOGIN_PATH
 
 	// generate request id
 	uuid, err := uuid.NewV7()
