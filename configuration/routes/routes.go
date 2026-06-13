@@ -5,6 +5,7 @@ import (
 	accounttoken "ghivarra/afterglow/src/app/api/account-token"
 	"ghivarra/afterglow/src/app/api/crypto"
 	serverapi "ghivarra/afterglow/src/app/api/server"
+	"ghivarra/afterglow/src/app/api/snapshot"
 	"ghivarra/afterglow/src/app/home"
 	"ghivarra/afterglow/src/middleware"
 
@@ -26,4 +27,5 @@ func CreateRouter(app *fiber.App) {
 	app.Post("/api/server", serverapi.Create)
 	app.Patch("/api/server/:serverId", serverapi.Update)
 	app.Delete("/api/server/:serverId", serverapi.Delete)
+	app.Post("/api/snapshot", snapshot.Create)
 }

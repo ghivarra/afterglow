@@ -27,6 +27,18 @@ func FetchById(id int) (*dbentity.ServerEntity, error) {
 	return &result, res.Error
 }
 
+func FetchByAlias(alias string) (*dbentity.ServerEntity, error) {
+	var result dbentity.ServerEntity
+	var mainTable = dbentity.ServerTableName
+
+	res := database.Ctx.
+		Table(mainTable).
+		Where("alias = ?", alias).
+		First(&result)
+
+	return &result, res.Error
+}
+
 func PartialUpdateServer(id int, data map[string]any) (*dbentity.ServerEntity, error) {
 	res := database.Ctx.
 		Table(dbentity.ServerTableName).
