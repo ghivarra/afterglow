@@ -47,3 +47,41 @@ func createAccount(payload AccountCreateRequestDto) (AccountCreateResponseDto, e
 		Username: entity.Username,
 	}, nil
 }
+
+func updateAccount(id string, payload AccountUpdateRequestDto) (*dbentity.AccountEntity, error) {
+	data := map[string]any{}
+
+	if payload.Password != nil {
+		password, err := encryptservice.Encrypt(*payload.Password)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt account password credential. Error: %v", err)
+		}
+		data["password"] = password
+	}
+
+	if payload.ApiClientId != nil {
+		apiClientId, err := encryptservice.Encrypt(*payload.ApiClientId)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt account api client id credential. Error: %v", err)
+		}
+		data["api_client_id"] = apiClientId
+	}
+
+	if payload.ApiClientKey != nil {
+		apiClientKey, err := encryptservice.Encrypt(*payload.ApiClientKey)
+		if err != nil {
+			return nil, fmt.Errorf("failed to encrypt account api client key credential. Error: %v", err)
+		}
+		data["api_client_key"] = apiClientKey
+	}
+
+	if len(data) == 0 {
+		return accounttable.FetchById(id)
+	}
+
+	return accounttable.PartialUpdateAccount(id, data)
+}
+
+func deleteAccount(id string) error {
+	return accounttable.DeleteAccount(id)
+}
