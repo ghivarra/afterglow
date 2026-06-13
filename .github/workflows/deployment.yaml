@@ -81,8 +81,10 @@ jobs:
             go env GOROOT GOPATH
             which go
 
+            systemctl --user stop gvr-afterglow
+
             rm -rf build/*
-            GOMAXPROCS=1 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -p=1 -trimpath -o build/afterglow-app
+            GOMAXPROCS=1 CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -p=1 -trimpath -o build/afterglow-app
 
             cp .env build/.env
             cp version.txt build/version.txt
