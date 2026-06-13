@@ -33,6 +33,6 @@ func ConnectDB() {
 
 	// failed
 	if err != nil {
-		log.Panic("failed to connect database")
+		log.Panicf("failed to connect database: %v", err)
 	}
 }
