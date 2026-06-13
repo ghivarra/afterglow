@@ -46,5 +46,5 @@ func LoadVersionExtension() {
 	versionStr = strings.ReplaceAll(versionStr, "\n", "")
 
 	// set env
-	environment.SetAppVersion(string(versionBytes))
+	environment.SetAppVersion(versionStr)
 }
